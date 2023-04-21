@@ -8,8 +8,6 @@ mydb = mysql.connector.connect(
   database="photoshareDB"
 )
 
-# userOption = start || login || register
-userOption = "start"
 userLoggedIn = False
 
 print("PhotoShare")
@@ -18,6 +16,12 @@ userEmail = ""
 userPassword = ""
 
 while not userLoggedIn:
+    mycursor = mydb.cursor()
+    mycursor.execute("select userID, email, password from Users")
+    myresult = mycursor.fetchall()
+    #for x in myresult:
+        #print(x)
+
     userInput = input("Select an option: (l) Login, (r) Register ")
     if userInput == "l":
         print("Log in as an existing user")
@@ -32,10 +36,6 @@ while not userLoggedIn:
         dob = input("Enter your date of birth (YYYY-MM--DD): ")
 
 
-mycursor = mydb.cursor()
-mycursor.execute("select userID, email, password from Users")
-myresult = mycursor.fetchall()
-#for x in myresult:
-    #print(x)
+
 
 mydb.close()
