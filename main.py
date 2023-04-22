@@ -1,5 +1,6 @@
 import sys
 import mysql.connector
+from functionalities import *
 
 mydb = mysql.connector.connect(
   host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
@@ -18,8 +19,8 @@ while not userLoggedIn:
     mycursor = mydb.cursor()
     mycursor.execute("select userID, email, password from Users")
     myresult = mycursor.fetchall()
-    for x in myresult:
-        print(x)
+    #for x in myresult:
+        #print(x)
 
     userInput = input("Select an option: (l) Login, (r) Register ")
     if userInput == "l":
@@ -61,7 +62,28 @@ while not userLoggedIn:
         print("User created. Log in to get started.")
 
 # Everything past this point is only accessible to logged in users
-print("What do you want to do? Select an option: ")
+while userLoggedIn:
+    print("(1) Friends List")
+    print("(2) My Photos")
+    print("(3) Browse Photos")
+    print("(4) Browse Tags")
+    print("(5) Log out")
+    selectedOption = input("Select an option")
+
+    match selectedOption:
+        case "1":
+            show_friends_menu(userID)
+        case "2":
+            show_my_photos_menu(userID)
+        case "3":
+            show_browse_photos_menu(userID)
+        case "4":
+            show_browse_tags_menu(userID)
+        case "5":
+            userLoggedIn = False
+
+print("Logging out...")
+
 
 mycursor.close()
 mydb.close()
