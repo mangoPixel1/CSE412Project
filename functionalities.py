@@ -1,5 +1,6 @@
 import sys
 import mysql.connector
+from datetime import date
 
 # Adding and listing friends
 def show_friends_menu(userID):
@@ -13,7 +14,7 @@ def show_friends_menu(userID):
     active = True
     while active:
         print()
-        print("(1) My Friends")
+        print("(1) Show Friends")
         print("(2) Add a Friend")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
@@ -21,17 +22,63 @@ def show_friends_menu(userID):
         match selectedOption:
             case "1":
                 # print friends list of {userID}
-                print("List of friends:")
                 mycursor.execute(f"select fName, lName \
                                  from Users u \
                                  join Friends f on u.userID = f.friendID \
                                  where f.userID = {userID}")
                 rows = mycursor.fetchall()
+                print(f"List of friends ({len(rows)}):")
                 for row in rows:
-                    print(row)
+                    print(f"{row[0]} {row[1]}")
+            
             case "2":
-                # prompt for email of user to add as friend
-                print("Enter the email address of the user you wish to add: ")
+                enteredEmail = input("Enter the email address of the user you wish to add: ")
+                mycursor.execute(f"select email, userID, fName, lName from Users") # retrieve all emails
+                rows = mycursor.fetchall()
+                
+                emailFound = False
+                email = ""
+                friendID = 0
+                fName = ""
+                lName = ""
+                for row in rows: # check if email is in use by another member
+                    if row[0] == enteredEmail:
+                        emailFound = True
+                        email = row[0]
+                        friendID = row[1]
+                        fName = row[2]
+                        lName = row[3]
+                 
+                if emailFound:
+                    mycursor.execute(f"select email, friendID \
+                                     from Users u \
+                                     join Friends f on u.userID = f.friendID \
+                                     where f.userID = {userID}") # retrieves user's friends list
+                    rows = mycursor.fetchall()
+                    
+                    if len(rows) > 0: # if user has at least 1 friend
+                        emailFound2 = False
+                        for row in rows: # check if users are already friends
+                            if row[0] == email:
+                                emailFound2 = True
+                                #friendID = int(row[1])
+
+                        if emailFound2:
+                            print(f"You are already friends with {fName} {lName}")
+                        else:
+                            mycursor.execute(f"insert into Friends (userID, friendshipDate, friendID) \
+                                            values(\"{userID}\", \"{date.today()}\", \"{friendID}\")")
+                            mydb.commit()
+                            print(f"Added {fName} {lName} to friends list")
+                    else: # if user's friend list is empty
+                        mycursor.execute(f"insert into Friends (userID, friendshipDate, friendID) \
+                                            values(\"{userID}\", \"{date.today()}\", \"{friendID}\")")
+                        mydb.commit()
+                        print(f"Added {fName} {lName} to friends list")
+                        
+                else:
+                    print("The email you entered is not associated with an existing account")
+                
             case "b":
                 active = False
 
