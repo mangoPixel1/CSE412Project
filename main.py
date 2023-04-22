@@ -24,13 +24,16 @@ while not userLoggedIn:
     userInput = input("Select an option: (l) Login, (r) Register ")
     if userInput == "l":
         print("Log in as an existing user")
-        userEmail = input("Enter your email address: ")
-        userPassword = input("Enter your password: ")
-        sqlCommand = f"select password from Users where email = \"{userEmail}\""
+        enteredEmail = input("Enter your email address: ")
+        enteredPassword = input("Enter your password: ")
+        sqlCommand = f"select password from Users where email = \"{enteredEmail}\""
         mycursor.execute(sqlCommand)
 
+        rows = mycursor.fetchall()
+
+        '''
         myResult = mycursor.fetchone()[0]
-        if userPassword == myResult:
+        if userPassword == myResult and len(rows) > 0:
             print("Login successful")
             userLoggedIn = True
             sqlCommand = f"select userID from Users where email = \"{userEmail}\""
@@ -39,22 +42,20 @@ while not userLoggedIn:
             userID = int(myResult)
         else:
             print("Invalid password")
-        
         '''
-        if mycursor.fetchone()[0] is None: # if email is valid
-                myResult = mycursor.fetchone()[0]
-                if userPassword == myResult: # if email is valid and password is valid
+        if len(rows) == 1: # if email is valid
+                storedPassword = rows[0][0]
+                if enteredPassword == storedPassword: # if email is valid and password is valid
                     print("Login successful")
                     userLoggedIn = True
-                    sqlCommand = f"select userID from Users where email = \"{userEmail}\""
+                    sqlCommand = f"select userID from Users where email = \"{enteredEmail}\""
                     mycursor.execute(sqlCommand)
-                    myResult = mycursor.fetchone()[0]
-                    userID = int(myResult)
+                    storedUserID = mycursor.fetchone()[0]
+                    userID = int(storedUserID)
                 else: # if email is valid and password is invalid
                     print("Invalid password")
         else: #if email is invalid
              print("Invalid email")
-        '''
     
     if userInput == "r":
         print("Register as a new user")
@@ -74,4 +75,5 @@ while not userLoggedIn:
 # Everything past this point is only accessible to logged in users
 print("What do you want to do? Select an option: ")
 
+mycursor.close()
 mydb.close()
