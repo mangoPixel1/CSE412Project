@@ -14,7 +14,7 @@ userID = 0 # userID of current user that is logged in
 
 
 print("PhotoShare")
-
+# mycursor = mydb.cursor()
 while not userLoggedIn:
     mycursor = mydb.cursor()
     mycursor.execute("select userID, email, password from Users")
@@ -63,12 +63,13 @@ while not userLoggedIn:
 
 # Everything past this point is only accessible to logged in users
 while userLoggedIn:
+    print()
     print("(1) Friends List")
     print("(2) My Photos")
     print("(3) Browse Photos")
     print("(4) Browse Tags")
     print("(5) Log out")
-    selectedOption = input("Select an option")
+    selectedOption = input("Select an option: ")
 
     match selectedOption:
         case "1":
