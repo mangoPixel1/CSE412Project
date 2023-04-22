@@ -31,18 +31,6 @@ while not userLoggedIn:
 
         rows = mycursor.fetchall()
 
-        '''
-        myResult = mycursor.fetchone()[0]
-        if userPassword == myResult and len(rows) > 0:
-            print("Login successful")
-            userLoggedIn = True
-            sqlCommand = f"select userID from Users where email = \"{userEmail}\""
-            mycursor.execute(sqlCommand)
-            myResult = mycursor.fetchone()[0]
-            userID = int(myResult)
-        else:
-            print("Invalid password")
-        '''
         if len(rows) == 1: # if email is valid
                 storedPassword = rows[0][0]
                 if enteredPassword == storedPassword: # if email is valid and password is valid
