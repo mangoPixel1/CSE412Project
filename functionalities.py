@@ -16,15 +16,17 @@ def show_friends_menu(userID):
         print()
         print("(1) Show Friends")
         print("(2) Add a Friend")
+        print("(3) Show Potential Friends")
+        print("(4) Delete Friend")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
 
         match selectedOption:
             case "1":
                 # print friends list of {userID}
-                mycursor.execute(f"select fName, lName \
+                mycursor.execute(f"select fName, lName, email, friendshipDate \
                                  from Users u \
-                                 join Friends f on u.userID = f.friendID \
+                                 join Friends f on u.userID = f.friendID\
                                  where f.userID = {userID}")
                 rows = mycursor.fetchall()
                 print(f"List of friends ({len(rows)}):")
@@ -78,14 +80,40 @@ def show_friends_menu(userID):
                         
                 else:
                     print("The email you entered is not associated with an existing account")
+            case "3":
+                # print list of users who are not friends with {userID}
+                mycursor.execute(f"select email, fName, lName \
+                                    from Users u \
+                                    where u.userID not in (select friendID \
+                                                            from Friends \
+                                                            where userID = {userID})\
+                                                            limit 10")
+                rows = mycursor.fetchall()
+                print(f"List of potential friends ({len(rows)}):")
+                for row in rows:
+                    print(f"{row[0]} {row[1]} {row[2]}")
+
+            case "4":
+                # delete friend from {userID}'s friends list
+                mycursor.execute(f"select friendID, fName, lName \
+                                    from Users u \
+                                    join Friends f on u.userID = f.friendID\
+                                    where f.userID = {userID}")
+                rows = mycursor.fetchall()
+                print(f"List of friends ({len(rows)}):")
+                for row in rows:
+                    print(f"{row[0]} {row[1]}")
+                enteredID = input("Enter the ID of the user you wish to delete: ")
+                mycursor.execute(f"DELETE FROM Friends WHERE (userID = {userID} AND friendID = {enteredID});") # Delete friend
+                print("Successfully deleted User from friends list")
                 
             case "b":
                 active = False
 
     mycursor.close()
+    mydb.commit()
     mydb.close()
         
-
 # Photo and album browsing
 def show_my_photos_menu(userID):
     mydb = mysql.connector.connect(
@@ -273,6 +301,70 @@ def show_browse_tags_menu(userID):
 
     mycursor.close()
     mydb.close()
+
+def show_upload_photos_menu(userID):
+    mydb = mysql.connector.connect(
+        host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+        user="admin",
+        password="password",
+        database="photoshareDB"
+    )
+    mycursor = mydb.cursor()
+
+    active = True
+    while active:
+        print("Upload Photo")
+        print("(a) Upload a photo")
+        print("(b) Go back")
+        selectedOption = input("Select an option: ")
+        
+        if selectedOption == "a":
+            enterPhoto = input("Upload photo url: ")
+            enterCaption = input("Enter a caption: ")
+            enteredTags = input("Enter tags (comma-separated): ")
+
+            # Display the albums
+            select_albums_query = "SELECT albumID, name FROM Albums"
+            mycursor.execute(select_albums_query)
+            albums = mycursor.fetchall()
+            print("Albums:")
+            for album in albums:
+                print(f"{album[0]}: {album[1]}")
+                
+            # Prompt user to select an album
+            albumID = input("Enter albumID: ")
+
+            # Insert photo into Photos table
+            insert_photo_query = f"INSERT INTO Photos (data, caption, albumID, ownerID) VALUES ('{enterPhoto}', '{enterCaption}', {albumID}, {userID})"
+            mycursor.execute(insert_photo_query)
+            photo_id = mycursor.lastrowid
+
+            # Insert tags into Tags table and PhotoTags table
+            tags = enteredTags.split(",")
+            for tag in tags:
+                # Check if tag already exists in Tags table
+                check_tag_query = f"SELECT tagID FROM Tags WHERE tagData = '{tag.strip()}'"
+                mycursor.execute(check_tag_query)
+                tag_row = mycursor.fetchone()
+                if tag_row is None:
+                    # Insert tag into Tags table
+                    insert_tag_query = f"INSERT INTO Tags (tagData) VALUES ('{tag.strip()}')"
+                    mycursor.execute(insert_tag_query)
+                    tag_id = mycursor.lastrowid
+                else:
+                    tag_id = tag_row[0]
+
+                # Insert tag into PhotoTags table
+                insert_phototag_query = f"INSERT INTO PhotoTags (photoID, tagID) VALUES ({photo_id}, {tag_id})"
+                mycursor.execute(insert_phototag_query)
+
+           # Commit changes to database
+            mydb.commit()
+            print("Photo uploaded successfully.\n")
+        
+        if selectedOption == "b":
+            print("Going back...\n")
+            active = False
 
 # Photo and album creating
 

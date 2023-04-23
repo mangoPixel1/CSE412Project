@@ -65,26 +65,34 @@ while not userLoggedIn:
 while userLoggedIn:
     print()
     print("(1) Friends List")
-    print("(2) My Photos")
-    print("(3) Browse Photos")
-    print("(4) Browse Tags")
-    print("(5) Log out")
+    print("(2) Upload a Photo")
+    print("(3) My Photos")
+    print("(4) Browse Photos")
+    print("(5) Browse Tags")
+    print("(6) Log out")
     selectedOption = input("Select an option: ")
 
     match selectedOption:
         case "1":
+            print("\n")
             show_friends_menu(userID)
         case "2":
-            show_my_photos_menu(userID)
+            print("\n")
+            show_upload_photos_menu(userID)
         case "3":
-            show_browse_photos_menu(userID)
+            print("\n")
+            show_my_photos_menu(userID)
         case "4":
-            show_browse_tags_menu(userID)
+            print("\n")
+            show_browse_photos_menu(userID)
         case "5":
+            print("\n")
+            show_browse_tags_menu(userID)
+        case "6":
+            print("\n")
             userLoggedIn = False
 
 print("Logging out...")
-
 
 mycursor.close()
 mydb.close()
