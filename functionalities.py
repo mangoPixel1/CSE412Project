@@ -157,21 +157,41 @@ def show_my_photos_menu(userID):
                         active2 = False
                     elif selectedOption2.isnumeric and hasAlbums == True:
                         if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
-                            show_single_album(rows[int(selectedOption)][0])
+                            show_single_album(rows[int(selectedOption2)][0]) # should be selectedOption2 ??
                         else:
-                            print("Invalid input")
+                            print("Invalid index")
                     
                         
                 print()
             case "2": # View my photos
-                mycursor.execute(f"select data from Photos where ownerID = {userID}")
-                rows = mycursor.fetchall()
-                if len(rows) < 1:
-                    print("You have not uploaded any photos")
-                else:
-                    print(f"Photos ({len(rows)}):")
-                    for row in rows:
-                        print(row[0])
+                active2 = True
+                while active2:
+                    mycursor.execute(f"select data, caption, photoID from Photos where ownerID = {userID}")
+                    rows = mycursor.fetchall()
+                    hasPhotos = False
+                    if len(rows) > 0: # if user has photos
+                        hasPhotos = True
+                        print(f"Photos ({len(rows)}):")
+                        index = 0
+                        for row in rows:
+                            print(f"({index}): {row[0]}")
+                            print(f"Caption: {row[1]}")
+                            print("\n")
+                            index += 1
+                    else:
+                        print("You have not uploaded any photos")
+                    
+                    print("(b) Go back")
+                    selectedOption2 = input("Select an option: ")
+                    if selectedOption2 == "b":
+                        active2 = False
+                    elif selectedOption2.isnumeric and hasPhotos == True:
+                        print(f"You selected {selectedOption2}")
+                        if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                            show_single_photo(rows[int(selectedOption2)][2])
+                        else:
+                            print("Invalid index")
+                    
             case "b":
                 active = False
     mycursor.close()
