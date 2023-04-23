@@ -88,18 +88,76 @@ def show_friends_menu(userID):
 
 # Photo and album browsing
 def show_my_photos_menu(userID):
+    mydb = mysql.connector.connect(
+        host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+        user="admin",
+        password="password",
+        database="photoshareDB"
+    )
+    mycursor = mydb.cursor()
+
     active = True
     while active:
         print()
         print("My Photos")
-        print("INSERT PHOTOS HERE")
+        print("(1) View my albums")
+        print("(2) View my photos")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
         
-        if selectedOption == "b":
-            active = False
+        match selectedOption:
+            case "1": # View my albums
+                active2 = True
+                while active2:
+                    print()
+                    mycursor.execute(f"select albumID, name from Albums where ownerID = {userID}")
+                    rows = mycursor.fetchall()
+                    hasAlbums = False
+                    if len(rows) > 0: # if user has albums
+                        hasAlbums = True
+                        print("My albums:")
+                        index = 0
+                        for row in rows:
+                            print(f"({index}) {row[1]}")
+                            index += 1
+                    else:
+                        print("You have no albums")
+
+                    print("(b) Go back")
+                    selectedOption2 = input("Select an option: ")
+                    if selectedOption2 == "b":
+                        active2 = False
+                    elif selectedOption2.isnumeric and hasAlbums == True:
+                        if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                            show_single_album(rows[int(selectedOption)][0])
+                        else:
+                            print("Invalid input")
+                    
+                        
+                print()
+            case "2": # View my photos
+                mycursor.execute(f"select data from Photos where ownerID = {userID}")
+                rows = mycursor.fetchall()
+                if len(rows) < 1:
+                    print("You have not uploaded any photos")
+                else:
+                    print(f"Photos ({len(rows)}):")
+                    for row in rows:
+                        print(row[0])
+            case "b":
+                active = False
+    mycursor.close()
+    mydb.close()
 
 def show_browse_photos_menu(userID):
+    mydb = mysql.connector.connect(
+        host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+        user="admin",
+        password="password",
+        database="photoshareDB"
+    )
+    mycursor = mydb.cursor()
+    
     active = True
     while active:
         print()
@@ -115,7 +173,89 @@ def show_browse_photos_menu(userID):
             case "b":
                 active = False
 
+    mycursor.close()
+    mydb.close()
+
+def show_single_photo(photoID):
+    mydb = mysql.connector.connect(
+        host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+        user="admin",
+        password="password",
+        database="photoshareDB"
+    )
+    mycursor = mydb.cursor()
+    
+    active = True
+    while active:
+        mycursor.execute(f"select caption, data from Photos where photoID = {photoID}")
+        row = mycursor.fetchone()
+
+        print()
+        print(f"Caption: {row[0]}")
+        print(f"URL: {row[1]}")
+
+        print("(1) Like")
+        print("(2) Comment")
+        print("(3) Read comments")
+        print("(b) Go back")
+        selectedOption = input("Select an option: ")
+        
+        match selectedOption:
+            case "1":
+                print("Liked photo")
+            case "2":
+                print("Write comment: ")
+            case "3":
+                print("SHOW COMMENTS HERE")
+            case "b":
+                active = False
+
+    mycursor.close()
+    mydb.close()
+
+def show_single_album(albumID):
+    mydb = mysql.connector.connect(
+        host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+        user="admin",
+        password="password",
+        database="photoshareDB"
+    )
+    mycursor = mydb.cursor()
+    
+    active = True
+    while active:
+        print()
+        mycursor.execute(f"select photoID, data from Photos where albumID = {albumID}")
+        rows = mycursor.fetchall()
+        hasPhotos = False
+        if len(rows) > 0: # if album has photos
+            hasPhotos = True
+            index = 0
+            for row in rows:
+                print(f"({index}) URL: {row[0]}")
+                index += 1
+        else:
+            print("This album has no photos")
+        print("(b) Go back")
+        
+        selectedOption = input("Select an option: ")
+        if selectedOption.isnumeric and hasPhotos == True:
+            if int(selectedOption) >= 0 and int(selectedOption) < len(rows)-1:
+                show_single_photo(rows[int(selectedOption)][0])
+        elif selectedOption == "b":
+            active = False
+    mycursor.close()
+    mydb.close()
+
 def show_browse_tags_menu(userID):
+    mydb = mysql.connector.connect(
+        host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+        user="admin",
+        password="password",
+        database="photoshareDB"
+    )
+    mycursor = mydb.cursor()
+    
     active = True
     while active:
         print()
@@ -130,6 +270,9 @@ def show_browse_tags_menu(userID):
                 print("SHOW PHOTOS CONTAINING TAG")
             case "b":
                 active = False
+
+    mycursor.close()
+    mydb.close()
 
 # Photo and album creating
 
