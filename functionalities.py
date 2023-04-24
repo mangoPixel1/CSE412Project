@@ -211,8 +211,9 @@ def show_browse_photos_menu(userID):
     while active:
         print()
         print("Browse Photos")
-        print("(1) Show photos")
+        print("(1) Show friends' photos")
         print("(2) Show recommended")
+        print("(3) Photos liked and commented")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
         
@@ -236,7 +237,7 @@ def show_browse_photos_menu(userID):
                         print("\n")
                         index += 1
                 else:
-                    print("You have not uploaded any photos")
+                    print("No photos")
                 
                 print("(b) Go back")
                 selectedOption2 = input("Select an option: ")
@@ -251,8 +252,73 @@ def show_browse_photos_menu(userID):
                     
                     
             case "2":
-                # show photos
-                print("SHOW PHOTOS FEED HERE")
+                # show photos that haven't been seen
+                mycursor.execute(f"select p.data, p.caption, p.photoID \
+                                from Photos p \
+                                left join Friends f on p.ownerID = f.friendID and f.userID = {userID} \
+                                left join Likes l on p.photoID = l.photoID and l.userID = {userID} \
+                                left join Comments c on p.photoID = c.photoID and c.ownerID = {userID} \
+                                where f.friendshipID is null and l.userID is null and c.commentID is null")
+                rows = mycursor.fetchall()
+                hasPhotos = False
+                if len(rows) > 0: # if user has photos
+                    hasPhotos = True
+                    print(f"Photos ({len(rows)}):")
+                    index = 0
+                    for row in rows:
+                        print(f"({index}): {row[0]}")
+                        print(f"Caption: {row[1]}")
+                        print("\n")
+                        index += 1
+                else:
+                    print("No photos")
+                
+                print("(b) Go back")
+                selectedOption2 = input("Select an option: ")
+                if selectedOption2 == "b":
+                    active2 = False
+                elif selectedOption2.isnumeric and hasPhotos == True:
+                    print(f"You selected {selectedOption2}")
+                    if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                        show_single_photo(rows[int(selectedOption2)][2], userID)
+                    else:
+                        print("Invalid index")
+            
+            case "3":
+                # show photos with likes or comments from the user
+                mycursor.execute(f"select p.data, p.caption, p.photoID \
+                                    from Photos p \
+                                    left join Likes l on p.photoID = l.photoID \
+                                    left join Comments c on p.photoID = c.photoID \
+                                    where p.ownerID != {userID} \
+                                        and (l.userID = {userID} or c.ownerID = {userID}) \
+                                        and (l.userID is not null or c.ownerID is not null) \
+                                    group by p.photoID")
+                rows = mycursor.fetchall()
+                hasPhotos = False
+                if len(rows) > 0:
+                    hasPhotos = True
+                    print(f"Photos ({len(rows)}):")
+                    index = 0
+                    for row in rows:
+                        print(f"({index}): {row[0]}")
+                        print(f"Caption: {row[1]}")
+                        print("\n")
+                        index += 1
+                else:
+                    print("No photos")
+                    
+                print("(b) Go back")
+                selectedOption2 = input("Select an option: ")
+                if selectedOption2 == "b":
+                    active2 = False
+                elif selectedOption2.isnumeric and hasPhotos == True:
+                    print(f"You selected {selectedOption2}")
+                    if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                        show_single_photo(rows[int(selectedOption2)][2], userID)
+                    else:
+                        print("Invalid index")
+
             case "b":
                 active = False
 
@@ -465,6 +531,9 @@ def show_upload_photos_menu(userID):
         if selectedOption == "b":
             print("Going back...\n")
             active = False
+            
+    mycursor.close()
+    mydb.close()
 
 # Photo and album creating
 
