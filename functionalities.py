@@ -157,7 +157,7 @@ def show_my_photos_menu(userID):
                         active2 = False
                     elif selectedOption2.isnumeric and hasAlbums == True:
                         if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
-                            show_single_album(rows[int(selectedOption2)][0]) # should be selectedOption2 ??
+                            show_single_album(rows[int(selectedOption2)][0], rows[int(selectedOption2)][1], userID)
                         else:
                             print("Invalid index")
                     
@@ -188,7 +188,7 @@ def show_my_photos_menu(userID):
                     elif selectedOption2.isnumeric and hasPhotos == True:
                         print(f"You selected {selectedOption2}")
                         if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
-                            show_single_photo(rows[int(selectedOption2)][2])
+                            show_single_photo(rows[int(selectedOption2)][2], userID)
                         else:
                             print("Invalid index")
                     
@@ -224,7 +224,7 @@ def show_browse_photos_menu(userID):
     mycursor.close()
     mydb.close()
 
-def show_single_photo(photoID):
+def show_single_photo(photoID, userID):
     mydb = mysql.connector.connect(
         host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
         user="admin",
@@ -241,6 +241,9 @@ def show_single_photo(photoID):
         print()
         print(f"Caption: {row[0]}")
         print(f"URL: {row[1]}")
+        mycursor.execute(f"select count(photoID) from Likes where photoID = {photoID}")
+        row = mycursor.fetchone()
+        print(f"Likes: {row[0]}")
 
         print("(1) Like")
         print("(2) Comment")
@@ -250,7 +253,13 @@ def show_single_photo(photoID):
         
         match selectedOption:
             case "1":
-                print("Liked photo")
+                try:
+                    mycursor.execute(f"insert into Likes values('{userID}','{photoID}')")
+                    mydb.commit()
+                    print("Liked photo")
+                except mysql.connector.errors.IntegrityError:
+                    print("Error: You have already liked this photo")
+                
             case "2":
                 print("Write comment: ")
             case "3":
@@ -261,7 +270,7 @@ def show_single_photo(photoID):
     mycursor.close()
     mydb.close()
 
-def show_single_album(albumID):
+def show_single_album(albumID, albumName, userID):
     mydb = mysql.connector.connect(
         host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
         user="admin",
@@ -272,26 +281,30 @@ def show_single_album(albumID):
     
     active = True
     while active:
-        print()
-        mycursor.execute(f"select photoID, data from Photos where albumID = {albumID}")
+        print("\n")
+        print(f"{albumName}:")
+        mycursor.execute(f"select photoID, data, caption from Photos where albumID = {albumID}")
         rows = mycursor.fetchall()
         hasPhotos = False
         if len(rows) > 0: # if album has photos
             hasPhotos = True
             index = 0
             for row in rows:
-                print(f"({index}) URL: {row[0]}")
+                print(f"({index}) {row[2]}")
                 index += 1
         else:
             print("This album has no photos")
         print("(b) Go back")
         
         selectedOption = input("Select an option: ")
-        if selectedOption.isnumeric and hasPhotos == True:
-            if int(selectedOption) >= 0 and int(selectedOption) < len(rows)-1:
-                show_single_photo(rows[int(selectedOption)][0])
-        elif selectedOption == "b":
+        if selectedOption == "b":
             active = False
+        elif selectedOption.isnumeric and hasPhotos == True:
+            if int(selectedOption) >= 0 and int(selectedOption) < len(rows):
+                show_single_photo(rows[int(selectedOption)][0], userID)
+            else:
+                print("Invalid index")
+        
     mycursor.close()
     mydb.close()
 
