@@ -523,7 +523,7 @@ def show_browse_tags_menu(userID):
                     print(f"{len(rows)} photos found with tag '{enteredtag}':")
                     for row in rows:
                         print(f"Photo ID: {row[0]}")
-                        print(f"Caption: {row[2]}")
+                        print(f"Caption: {row[1]}")
                         print(f"Data: {row[1][:20]}")
                         print("\n")
 
