@@ -24,14 +24,14 @@ def show_friends_menu(userID):
         match selectedOption:
             case "1":
                 # print friends list of {userID}
-                mycursor.execute(f"select fName, lName, email, friendshipDate \
+                mycursor.execute(f"select u.fName, u.lName, u.email, f.friendshipDate \
                                  from Users u \
                                  join Friends f on u.userID = f.friendID\
                                  where f.userID = {userID}")
                 rows = mycursor.fetchall()
                 print(f"List of friends ({len(rows)}):")
                 for row in rows:
-                    print(f"{row[0]} {row[1]}")
+                    print(f"{row[0]} {row[1]} {row[2]} {row[3]}")
             
             case "2":
                 enteredEmail = input("Enter the email address of the user you wish to add: ")
@@ -116,6 +116,7 @@ def show_friends_menu(userID):
         
 # Photo and album browsing
 def show_my_photos_menu(userID):
+    userID = userID
     mydb = mysql.connector.connect(
         host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
         user="admin",
@@ -211,12 +212,46 @@ def show_browse_photos_menu(userID):
         print()
         print("Browse Photos")
         print("(1) Show photos")
+        print("(2) Show recommended")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
         
         match selectedOption:
             case "1":
                 # show only photos of friends
+                mycursor.execute(f"select p.data, p.caption, p.photoID \
+                                 from Users u \
+                                 join Friends f on u.userID = f.friendID \
+                                 join Photos p on f.friendID = p.ownerID\
+                                 where f.userID = {userID}")
+                rows = mycursor.fetchall()
+                hasPhotos = False
+                if len(rows) > 0: # if user has photos
+                    hasPhotos = True
+                    print(f"Photos ({len(rows)}):")
+                    index = 0
+                    for row in rows:
+                        print(f"({index}): {row[0]}")
+                        print(f"Caption: {row[1]}")
+                        print("\n")
+                        index += 1
+                else:
+                    print("You have not uploaded any photos")
+                
+                print("(b) Go back")
+                selectedOption2 = input("Select an option: ")
+                if selectedOption2 == "b":
+                    active2 = False
+                elif selectedOption2.isnumeric and hasPhotos == True:
+                    print(f"You selected {selectedOption2}")
+                    if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                        show_single_photo(rows[int(selectedOption2)][2], userID)
+                    else:
+                        print("Invalid index")
+                    
+                    
+            case "2":
+                # show photos
                 print("SHOW PHOTOS FEED HERE")
             case "b":
                 active = False
@@ -235,35 +270,68 @@ def show_single_photo(photoID, userID):
     
     active = True
     while active:
+        # select photos
         mycursor.execute(f"select caption, data from Photos where photoID = {photoID}")
         row = mycursor.fetchone()
 
         print()
         print(f"Caption: {row[0]}")
         print(f"URL: {row[1]}")
+
+        # show likes
         mycursor.execute(f"select count(photoID) from Likes where photoID = {photoID}")
         row = mycursor.fetchone()
         print(f"Likes: {row[0]}")
 
+        # select tags
+        mycursor.execute(f"select tagData \
+                         from Tags t\
+                         join PhotoTags pt on pt.tagID = t.tagID\
+                         where pt.photoID = {photoID}")
+        tags = mycursor.fetchall()
+        if len(tags) > 0:
+            print("Tags: ", end="")
+            for i in range(len(tags)):
+                if i != len(tags) - 1:
+                    print(f"{tags[i][0]}, ", end="")
+                else:
+                    print(f"{tags[i][0]}")
+        else:
+            print("No tags for this photo")
+
+        # Show options
         print("(1) Like")
         print("(2) Comment")
         print("(3) Read comments")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
-        
+
+        # Handle option
         match selectedOption:
             case "1":
+                # Add like to Likes table
                 try:
                     mycursor.execute(f"insert into Likes values('{userID}','{photoID}')")
                     mydb.commit()
                     print("Liked photo")
                 except mysql.connector.errors.IntegrityError:
                     print("Error: You have already liked this photo")
-                
             case "2":
-                print("Write comment: ")
+                # Get comment from user and add to Comments table
+                comment = input("Write comment: ")
+                mycursor.execute(f"insert into Comments (ownerID, photoID, text) values ({userID}, {photoID}, '{comment}')")
+                mydb.commit()
+                print("Added comment")
             case "3":
-                print("SHOW COMMENTS HERE")
+                # Get comments for photo and print them
+                mycursor.execute(f"select c.text, u.fName, u.lName from Comments c join Users u on c.ownerID = u.userID where c.photoID = {photoID}")
+                comments = mycursor.fetchall()
+                if len(comments) > 0:
+                    print(f"Comments ({len(comments)}):")
+                    for comment in comments:
+                        print(f"{comment[1]} {comment[2]}: {comment[0]}")
+                else:
+                    print("No comments for this photo")
             case "b":
                 active = False
 
@@ -304,7 +372,6 @@ def show_single_album(albumID, albumName, userID):
                 show_single_photo(rows[int(selectedOption)][0], userID)
             else:
                 print("Invalid index")
-        
     mycursor.close()
     mydb.close()
 
@@ -368,28 +435,28 @@ def show_upload_photos_menu(userID):
             albumID = input("Enter albumID: ")
 
             # Insert photo into Photos table
-            insert_photo_query = f"INSERT INTO Photos (data, caption, albumID, ownerID) VALUES ('{enterPhoto}', '{enterCaption}', {albumID}, {userID})"
-            mycursor.execute(insert_photo_query)
-            photo_id = mycursor.lastrowid
+            insertphoto = f"INSERT INTO Photos (data, caption, albumID, ownerID) VALUES ('{enterPhoto}', '{enterCaption}', {albumID}, {userID})"
+            mycursor.execute(insertphoto)
+            photoid = mycursor.lastrowid
 
             # Insert tags into Tags table and PhotoTags table
             tags = enteredTags.split(",")
             for tag in tags:
                 # Check if tag already exists in Tags table
-                check_tag_query = f"SELECT tagID FROM Tags WHERE tagData = '{tag.strip()}'"
-                mycursor.execute(check_tag_query)
-                tag_row = mycursor.fetchone()
-                if tag_row is None:
+                tagQuery = f"SELECT tagID FROM Tags WHERE tagData = '{tag.strip()}'"
+                mycursor.execute(tagQuery)
+                tagRow = mycursor.fetchone()
+                if tagRow is None:
                     # Insert tag into Tags table
-                    insert_tag_query = f"INSERT INTO Tags (tagData) VALUES ('{tag.strip()}')"
-                    mycursor.execute(insert_tag_query)
-                    tag_id = mycursor.lastrowid
+                    inserttag = f"INSERT INTO Tags (tagData) VALUES ('{tag.strip()}')"
+                    mycursor.execute(inserttag)
+                    tagid = mycursor.lastrowid
                 else:
-                    tag_id = tag_row[0]
+                    tagid = tagRow[0]
 
                 # Insert tag into PhotoTags table
-                insert_phototag_query = f"INSERT INTO PhotoTags (photoID, tagID) VALUES ({photo_id}, {tag_id})"
-                mycursor.execute(insert_phototag_query)
+                insertphototag = f"INSERT INTO PhotoTags (photoID, tagID) VALUES ({photoid}, {tagid})"
+                mycursor.execute(insertphototag)
 
            # Commit changes to database
             mydb.commit()
