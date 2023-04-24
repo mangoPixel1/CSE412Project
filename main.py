@@ -22,7 +22,7 @@ while not userLoggedIn:
     #for x in myresult:
         #print(x)
 
-    userInput = input("Select an option: (l) Login, (r) Register ")
+    userInput = input("Select an option: (l) Login, (r) Register (q) Quit ")
     if userInput == "l":
         print("Log in as an existing user")
         enteredEmail = input("Enter your email address: ")
@@ -61,38 +61,42 @@ while not userLoggedIn:
         mydb.commit()
         print("User created. Log in to get started.")
 
-# Everything past this point is only accessible to logged in users
-while userLoggedIn:
-    print()
-    print("(1) Friends List")
-    print("(2) Upload a Photo")
-    print("(3) My Photos")
-    print("(4) Browse Photos")
-    print("(5) Browse Tags")
-    print("(6) Log out")
-    selectedOption = input("Select an option: ")
+    if userInput == "q":
+        break
 
-    match selectedOption:
-        case "1":
-            print("\n")
-            show_friends_menu(userID)
-        case "2":
-            print("\n")
-            show_upload_photos_menu(userID)
-        case "3":
-            print("\n")
-            show_my_photos_menu(userID)
-        case "4":
-            print("\n")
-            show_browse_photos_menu(userID)
-        case "5":
-            print("\n")
-            show_browse_tags_menu(userID)
-        case "6":
-            print("\n")
-            userLoggedIn = False
+    # Everything past this point is only accessible to logged in users
+    while userLoggedIn:
+        print()
+        print("(1) Friends List")
+        print("(2) Upload a Photo")
+        print("(3) My Photos")
+        print("(4) Browse Photos")
+        print("(5) Browse Tags")
+        print("(6) Log out")
+        selectedOption = input("Select an option: ")
 
-print("Logging out...")
+        match selectedOption:
+            case "1":
+                print("\n")
+                show_friends_menu(userID)
+            case "2":
+                print("\n")
+                show_upload_photos_menu(userID)
+            case "3":
+                print("\n")
+                show_my_photos_menu(userID)
+            case "4":
+                print("\n")
+                show_browse_photos_menu(userID)
+            case "5":
+                print("\n")
+                show_browse_tags_menu(userID)
+            case "6":
+                print("\n")
+                userLoggedIn = False
+                print("Logging out...")
+
+print("Logging off...")
 
 mycursor.close()
 mydb.close()
