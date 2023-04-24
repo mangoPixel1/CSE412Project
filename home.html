@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <title>PhotoShare - Home</title>
+</head>
+<body>
+    <h1>
+        <py-config>
+            packages = ["mysql.connector"]
+        </py-config>
+        <h2 id="welcome">PhotoShare</h2>
+        <py-script>
+            import mysql.connector
+
+            mydb = mysql.connector.connect(
+            host="photosharedb.c4csvx1ggxlz.us-east-2.rds.amazonaws.com",
+            user="admin",
+            password="password",
+            database="photoshareDB"
+            )
+            #display('PhotoShare', target="welcome", append=False)
+        </py-script>
+        <form id="LoginForm">
+            <label for="email">Email:</label><br>
+            <input type="text" id="email" name="email"><br>
+            <label for="password">Password:</label><br>
+            <input type="text" id="password" name="password"><br>
+            <button id="my-button" py-onClick="display_hello()">Log in</button>
+        </form>
+        
+    </h1>
+</body>
+</html>
