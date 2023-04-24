@@ -131,6 +131,7 @@ def show_my_photos_menu(userID):
         print("My Photos")
         print("(1) View my albums")
         print("(2) View my photos")
+        print("(3) Delete photo")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
         
@@ -172,6 +173,7 @@ def show_my_photos_menu(userID):
                     hasPhotos = False
                     if len(rows) > 0: # if user has photos
                         hasPhotos = True
+                        print("\n")
                         print(f"Photos ({len(rows)}):")
                         index = 0
                         for row in rows:
@@ -192,7 +194,49 @@ def show_my_photos_menu(userID):
                             show_single_photo(rows[int(selectedOption2)][2], userID)
                         else:
                             print("Invalid index")
+            
+            case "3": # Delete a photo
+                active2 = True
+                while active2:
+                    mycursor.execute(f"select data, caption, photoID from Photos where ownerID = {userID}")
+                    rows = mycursor.fetchall()
+                    hasPhotos = False
+                    if len(rows) > 0: # if user has photos
+                        hasPhotos = True
+                        print(f"Photos ({len(rows)}):")
+                        index = 0
+                        for row in rows:
+                            print(f"({index}): {row[0]}")
+                            print(f"Caption: {row[1]}")
+                            print("\n")
+                            index += 1
+                    else:
+                        print("You have not uploaded any photos")
                     
+                    print("(b) Go back")
+                    selectedOption2 = input("Select an option: ")
+                    if selectedOption2 == "b":
+                        active2 = False
+                    elif selectedOption2.isnumeric and hasPhotos == True:
+                        print(f"You selected {selectedOption2}")
+                        if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                            photoID = rows[int(selectedOption2)][2]
+                            try:
+                                # Delete associated likes
+                                mycursor.execute(f"delete from Likes where photoID = {photoID}")
+                                # Delete associated comments
+                                mycursor.execute(f"delete from Comments where photoID = {photoID}")
+                                # Delete associated phototags
+                                mycursor.execute(f"delete from PhotoTags where photoID = {photoID}")
+                                # Delete associated photo
+                                mycursor.execute(f"delete from Photos where photoID = {photoID}")
+                                print(f"Photo with ID {photoID} deleted successfully")
+                                mydb.commit()
+                            except mysql.connector.errors.IntegrityError:
+                                print("Unable to delete photo with ID {photoID} due to foreign key constraint")
+                        else:
+                            print("Invalid index")
+
             case "b":
                 active = False
     mycursor.close()
@@ -253,36 +297,44 @@ def show_browse_photos_menu(userID):
                     
             case "2":
                 # show photos that haven't been seen
-                mycursor.execute(f"select p.data, p.caption, p.photoID \
-                                from Photos p \
-                                left join Friends f on p.ownerID = f.friendID and f.userID = {userID} \
-                                left join Likes l on p.photoID = l.photoID and l.userID = {userID} \
-                                left join Comments c on p.photoID = c.photoID and c.ownerID = {userID} \
-                                where f.friendshipID is null and l.userID is null and c.commentID is null")
-                rows = mycursor.fetchall()
-                hasPhotos = False
-                if len(rows) > 0: # if user has photos
-                    hasPhotos = True
-                    print(f"Photos ({len(rows)}):")
-                    index = 0
-                    for row in rows:
-                        print(f"({index}): {row[0]}")
-                        print(f"Caption: {row[1]}")
-                        print("\n")
-                        index += 1
-                else:
-                    print("No photos")
-                
-                print("(b) Go back")
-                selectedOption2 = input("Select an option: ")
-                if selectedOption2 == "b":
-                    active2 = False
-                elif selectedOption2.isnumeric and hasPhotos == True:
-                    print(f"You selected {selectedOption2}")
-                    if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
-                        show_single_photo(rows[int(selectedOption2)][2], userID)
+                offset = 0
+                while True:
+                    mycursor.execute(f"select p.data, p.caption, p.photoID \
+                                    from Photos p \
+                                    left join Friends f on p.ownerID = f.friendID and f.userID = {userID} \
+                                    left join Likes l on p.photoID = l.photoID and l.userID = {userID} \
+                                    left join Comments c on p.photoID = c.photoID and c.ownerID = {userID} \
+                                    where f.friendshipID is null and l.userID is null and c.commentID is null \
+                                    limit 5 offset {offset}")
+                    rows = mycursor.fetchall()
+                    hasPhotos = False
+                    if len(rows) > 0: # if user has photos
+                        hasPhotos = True
+                        print(f"Photos ({len(rows)}):")
+                        index = 0
+                        for row in rows:
+                            print(f"({index}): {row[0]}")
+                            print(f"Caption: {row[1]}")
+                            print("\n")
+                            index += 1
+                        if len(rows) == 5:
+                            print("(n) Next")
                     else:
-                        print("Invalid index")
+                        print("No photos")
+                    
+                    print("(b) Go back")
+                    selectedOption2 = input("Select an option: ")
+                    if selectedOption2 == "b":
+                        active2 = False
+                        break
+                    elif selectedOption2 == "n" and hasPhotos == True and len(rows) == 5:
+                        offset += 5
+                    elif selectedOption2.isnumeric and hasPhotos == True:
+                        print(f"You selected {selectedOption2}")
+                        if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                            show_single_photo(rows[int(selectedOption2)][2], userID)
+                        else:
+                            print("Invalid index")
             
             case "3":
                 # show photos with likes or comments from the user
@@ -454,17 +506,82 @@ def show_browse_tags_menu(userID):
     while active:
         print()
         print("Browse Tags")
-        print("(1) Show tags")
+        print("(1) Search tag")
+        print("(2) Browse most popular tags")
         print("(b) Go back")
         selectedOption = input("Select an option: ")
 
         match selectedOption:
             case "1":
                 # prompt user for a tag to search
-                print("SHOW PHOTOS CONTAINING TAG")
+                enteredtag = input("Search tag: ")
+                mycursor.execute(f"SELECT data, caption FROM Photos JOIN PhotoTags ON Photos.photoID = PhotoTags.photoID JOIN Tags ON PhotoTags.tagID = Tags.tagID WHERE Tags.tagData = '{enteredtag}'")
+                rows = mycursor.fetchall()
+                if len(rows) == 0:
+                    print("No photos found with that tag")
+                else:
+                    print(f"{len(rows)} photos found with tag '{enteredtag}':")
+                    for row in rows:
+                        print(f"Photo ID: {row[0]}")
+                        print(f"Caption: {row[2]}")
+                        print(f"Data: {row[1][:20]}")
+                        print("\n")
+
+                offset = 0
+                while True:
+                    # prompt user for a tag to search
+                    enteredtag = input("Search tag: ")
+                    mycursor.execute(f"SELECT p.data, p.caption, p.photoID \
+                                    FROM Photos p\
+                                    JOIN PhotoTags ON p.photoID = PhotoTags.photoID \
+                                    JOIN Tags ON PhotoTags.tagID = Tags.tagID \
+                                    WHERE Tags.tagData = '{enteredtag}' \
+                                    limit 5 offset {offset}")
+                    rows = mycursor.fetchall()
+                    hasPhotos = False
+                    if len(rows) > 0: # if user has photos
+                        hasPhotos = True
+                        print(f"Photos ({len(rows)}):")
+                        index = 0
+                        for row in rows:
+                            print(f"({index}): {row[0]}")
+                            print(f"Caption: {row[1]}")
+                            print("\n")
+                            index += 1
+                        if len(rows) == 5:
+                            print("(n) Next")
+                    else:
+                        print("No photos")
+                    
+                    print("(b) Go back")
+                    selectedOption2 = input("Select an option: ")
+                    if selectedOption2 == "b":
+                        active2 = False
+                        break
+                    elif selectedOption2 == "n" and hasPhotos == True and len(rows) == 5:
+                        offset += 5
+                    elif selectedOption2.isnumeric and hasPhotos == True:
+                        print(f"You selected {selectedOption2}")
+                        if int(selectedOption2) >= 0 and int(selectedOption2) < len(rows):
+                            show_single_photo(rows[int(selectedOption2)][2], userID)
+                        else:
+                            print("Invalid index")
+            case "2":
+                mycursor.execute("SELECT tagData, COUNT(*) AS tagCount FROM Tags \
+                    JOIN PhotoTags ON Tags.tagID = PhotoTags.tagID \
+                    GROUP BY Tags.tagID \
+                    ORDER BY tagCount DESC \
+                    LIMIT 10")
+                rows = mycursor.fetchall()
+                print("Top 10 Tags:")
+                for row in rows:
+                    print(f"{row[0]} ({row[1]} photos)")
+                break
+
             case "b":
                 active = False
 
+                
     mycursor.close()
     mydb.close()
 
@@ -482,6 +599,8 @@ def show_upload_photos_menu(userID):
         print("Upload Photo")
         print("(a) Upload a photo")
         print("(b) Go back")
+        print("(c) Add an Album")
+        print("(d) Delete an Album")
         selectedOption = input("Select an option: ")
         
         if selectedOption == "a":
@@ -490,7 +609,7 @@ def show_upload_photos_menu(userID):
             enteredTags = input("Enter tags (comma-separated): ")
 
             # Display the albums
-            select_albums_query = "SELECT albumID, name FROM Albums"
+            select_albums_query = f"SELECT albumID, name FROM Albums where ownerID = {userID}"
             mycursor.execute(select_albums_query)
             albums = mycursor.fetchall()
             print("Albums:")
@@ -531,10 +650,55 @@ def show_upload_photos_menu(userID):
         if selectedOption == "b":
             print("Going back...\n")
             active = False
+        
+        if selectedOption == "c":
+            enterAlbumName = input("Enter the album name: ")
+            mycursor.execute(f"INSERT INTO Albums (name, ownerID) VALUES ('{enterAlbumName}', {userID})")
+            print("Album successfully added. \n")
+            mydb.commit()
+
+        if selectedOption == "d":
+            # Display the albums
+            select_albums_query = f"SELECT albumID, name FROM Albums WHERE ownerID = {userID}"
+            mycursor.execute(select_albums_query)
+            albums = mycursor.fetchall()
+            print("Albums:")
+            for album in albums:
+                print(f"{album[0]}: {album[1]}")
+            
+            # Prompt user to select an album
+            albumID = input("Enter albumID to delete: ")
+            
+            # Check if the album belongs to the user
+            select_album_query = f"SELECT ownerID FROM Albums WHERE albumID = {albumID}"
+            mycursor.execute(select_album_query)
+            album_owner = mycursor.fetchone()
+            if album_owner is None or album_owner[0] != userID:
+                print("You do not have permission to delete this album")
+                continue
+            
+            # Select all photos in the album
+            select_photos_query = f"SELECT photoID FROM Photos WHERE albumID = {albumID}"
+            mycursor.execute(select_photos_query)
+            photos = mycursor.fetchall()
+            
+            try:
+                # Delete associated likes, comments, and phototags for each photo in the album
+                for photo in photos:
+                    mycursor.execute(f"DELETE FROM Likes WHERE photoID = {photo[0]}")
+                    mycursor.execute(f"DELETE FROM Comments WHERE photoID = {photo[0]}")
+                    mycursor.execute(f"DELETE FROM PhotoTags WHERE photoID = {photo[0]}")
+                
+                # Delete all photos from the album
+                mycursor.execute(f"DELETE FROM Photos WHERE albumID = {albumID}")
+                
+                # Delete the album itself
+                mycursor.execute(f"DELETE FROM Albums WHERE albumID = {albumID}")
+                
+                print(f"All photos from album with albumID {albumID} deleted successfully")
+                mydb.commit()
+            except mysql.connector.errors.IntegrityError:
+                print(f"Unable to delete photos from album with albumID {albumID} due to foreign key constraint")
             
     mycursor.close()
     mydb.close()
-
-# Photo and album creating
-
-# Commenting on photos
